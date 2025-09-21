@@ -1,5 +1,5 @@
 // Configuración de la API (usa la URL de tu MockAPI para animes)
-const API_URL = 'https://65175215582f3c7e7d69f379.mockapi.io/api/v1/animes';
+const API_URL = 'https://68d07d36ec1a5ff33827584d.mockapi.io/:endpoint';
 
 // Elementos del DOM
 const listaAnimes = document.getElementById('animes-listado');
