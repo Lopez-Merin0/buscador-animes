@@ -1,0 +1,21 @@
+/*
+  Personalización de los colores de Bulma
+  Este color se aplica a los botones primarios, tags, y el hero.
+*/
+:root {
+  --bulma-primary: #800080; /* Un púrpura oscuro */
+}
+
+.card-footer-item {
+    color: var(--bulma-primary);
+}
+.card-footer-item.editar-anime {
+    color: #f7d46c; /* Amarillo para el botón de editar */
+}
+.card-footer-item.eliminar-anime {
+    color: #ff3860; /* Rojo para el botón de eliminar */
+}
+
+.tag.is-primary {
+    background-color: var(--bulma-primary) !important;
+}
