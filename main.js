@@ -1,5 +1,5 @@
 // Configuración de la API (usa la URL de tu MockAPI para animes)
-const API_URL = 'https://68d07d36ec1a5ff33827584d.mockapi.io/:endpoint';
+const API_URL = 'https://68d07d36ec1a5ff33827584d.mockapi.io/animes';
 
 // Elementos del DOM
 const listaAnimes = document.getElementById('animes-listado');
@@ -29,14 +29,14 @@ let listaCompletaAnimes = [];
 // Funciones de utilidad
 const mostrarSpinner = () => loadingSpinner.classList.add('is-active');
 const ocultarSpinner = () => loadingSpinner.classList.remove('is-active');
-const mostrarModal = (titulo, id = null) => {
+const mostrarModal = (titulo) => {
     modalTitle.textContent = titulo;
-    animeIdInput.value = id;
     crudModal.classList.add('is-active');
 };
 const ocultarModal = () => {
     crudModal.classList.remove('is-active');
     animeForm.reset();
+    animeIdInput.value = '';
 };
 const limpiarListado = () => listaAnimes.innerHTML = '';
 const mostrarNoResultados = (mostrar) => {
@@ -131,6 +131,7 @@ const eliminarAnime = async (id) => {
     try {
         const respuesta = await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
         if (!respuesta.ok) throw new Error('Error al eliminar el anime');
+        
         await obtenerAnimes();
     } catch (error) {
         console.error('Error:', error);
@@ -207,18 +208,20 @@ listaAnimes.addEventListener('click', (evento) => {
     if (botonEditar) {
         evento.preventDefault();
         const id = botonEditar.dataset.id;
-        const animeAEditar = listaCompletaAnimes.find(anime => anime.id === id);
+        
+        const animeAEditar = listaCompletaAnimes.find(anime => anime.id === id); 
         if (animeAEditar) {
             animeIdInput.value = animeAEditar.id;
             animeTituloInput.value = animeAEditar.titulo;
             animeImagenInput.value = animeAEditar.imagen;
             animeGeneroSelect.value = animeAEditar.genero;
             animeEstadoSelect.value = animeAEditar.estado;
-            mostrarModal('Editar Anime', id);
+            mostrarModal('Editar Anime');
         }
     } else if (botonEliminar) {
         evento.preventDefault();
         const id = botonEliminar.dataset.id;
+        // Se llama a la función eliminarAnime
         eliminarAnime(id);
     }
 });
