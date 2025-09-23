@@ -1,6 +1,6 @@
 # 🎌 Buscador y Gestión de Animes
 
-![Captura de pantalla de la aplicación](https://via.placeholder.com/800x400.png?text=Captura+de+tu+aplicación+aquí)
+![Captura de pantalla de la aplicación](Es la imagen de agregar y de main)
 
 ### **📝 Descripción del Proyecto**
 
