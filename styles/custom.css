@@ -1,21 +1,216 @@
-/*
-  Personalización de los colores de Bulma
-  Este color se aplica a los botones primarios, tags, y el hero.
-*/
-:root {
-  --bulma-primary: #800080; /* Un púrpura oscuro */
+/* Custom Styles for Anime Finder - Pastel Theme (Versión Final) */
+
+/* ===================================================================
+   1. General Styling and Background
+   =================================================================== */
+body {
+    background-color: #f9f7f9; /* Fondo suave y cálido */
+    color: #333333; /* Texto principal gris oscuro */
+    min-height: 100vh;
+}
+
+/* ===================================================================
+   2. Header (Hero) Styling
+   =================================================================== */
+.hero.is-primary {
+    background-color: #b5e7d5; /* Menta Claro para el header */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    color: #333333;
+}
+
+.hero .title, .hero .subtitle, .hero .has-text-white {
+    color: #333333 !important; /* Asegura que el texto sea oscuro sobre el pastel */
+}
+
+.hero img {
+    border: 3px solid #b19cd9 !important; /* Borde del logo color lavanda */
+}
+
+/* ===================================================================
+   3. Button and Input Styling
+   =================================================================== */
+.button {
+    border-radius: 8px;
+    transition: all 0.3s ease;
+}
+
+/* Botón Principal (Lavanda) */
+.button.is-primary {
+    background-color: #b19cd9; 
+    border-color: #b19cd9;
+    color: #ffffff;
+    font-weight: 600;
+}
+.button.is-primary:hover {
+    background-color: #c4b5e2; 
+    border-color: #c4b5e2;
+    transform: translateY(-1px);
+}
+.button.is-dark {
+    background-color: #555555;
+    color: #ffffff;
+}
+.button.is-light {
+    background-color: #e0e0e0;
+    color: #333333;
+    border: 1px solid #d0d0d0;
+}
+
+/* Inputs y Selects */
+.input, .select select {
+    background-color: #ffffff;
+    border-color: #e0e0e0;
+    color: #333333;
+    border-radius: 8px;
+}
+
+.input:focus, .select select:focus {
+    border-color: #b19cd9;
+    box-shadow: 0 0 0 0.125em rgba(177, 156, 217, 0.4);
+}
+
+/* ===================================================================
+   4. Anime Card Styling (Centrado Forzado y Tags)
+   =================================================================== */
+.anime-card {
+    background-color: #ffffff; 
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s, box-shadow 0.3s;
+    height: 350px; /* Altura fija para centrado absoluto */
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    position: relative; /* CLAVE para el centrado absoluto del contenido */
+    overflow: hidden; 
+    padding-bottom: 50px; /* Espacio para el footer */
+}
+
+.anime-card:hover {
+    transform: translateY(-5px); 
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+}
+
+.card-content {
+    /* SOLUCIÓN DE CENTRADO FORZADO */
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 50px; /* Deja espacio para el footer */
+    
+    display: flex;
+    flex-direction: column;
+    align-items: center; /* Centra horizontalmente todo el contenido */
+    justify-content: center; /* Centra verticalmente */
+    padding: 1.5rem;
+}
+
+.anime-avatar {
+    width: 72px; 
+    height: 72px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 4px solid #b19cd9; /* Lavanda pastel en el borde del avatar */
+    margin-bottom: 1.5rem; /* Separación del título */
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    display: block;
+}
+
+.card-title {
+    color: #333333;
+    margin-bottom: 1rem;
+    font-size: 1.6rem; 
+    font-weight: 700;
+    text-align: center;
+    line-height: 1.2;
+}
+
+/* Etiquetas (Tags) */
+.tags.is-centered {
+    justify-content: center;
+    margin-top: 0.5rem; 
+    margin-bottom: 0 !important;
+}
+
+.tag {
+    font-weight: 600;
+    border-radius: 9999px; /* Pill shape */
+    margin: 0 0.4rem !important;
+    padding: 0.25em 1em;
+}
+
+.tag.is-primary { /* Género */
+    background-color: #e0e0ff;
+    color: #4a4a4a;
+}
+.tag.is-success { /* En emisión (Menta) */
+    background-color: #c0f7d5; 
+    color: #217346;
+}
+.tag.is-info { /* Finalizado (Lavanda) */
+    background-color: #b19cd9; 
+    color: #ffffff;
+}
+.tag.is-warning { /* Próximo a estrenar (Amarillo) */
+    background-color: #fffac2; 
+    color: #a07d00;
+}
+
+
+/* ===================================================================
+   5. Card Footer Styling (Botones CRUD)
+   =================================================================== */
+.card-footer {
+    /* CLAVE: Fija el footer a la base */
+    position: absolute; 
+    bottom: 0;
+    left: 0;
+    right: 0;
+    border-top: 1px solid #eeeeee;
+    padding: 0.5rem 1rem;
+    display: flex;
+    justify-content: center; /* Centra los botones en el footer */
+    background-color: #ffffff; 
+    z-index: 10;
 }
 
 .card-footer-item {
-    color: var(--bulma-primary);
-}
-.card-footer-item.editar-anime {
-    color: #f7d46c; /* Amarillo para el botón de editar */
-}
-.card-footer-item.eliminar-anime {
-    color: #ff3860; /* Rojo para el botón de eliminar */
+    font-weight: 600;
+    font-size: 0.85rem;
+    border-radius: 8px; /* Pequeño redondeado en los botones */
+    padding: 0.5rem 0.75rem; 
+    margin: 0 0.25rem; /* Separación entre los botones */
+    flex-grow: 1; /* Para que ocupen espacio equitativo */
+    text-align: center;
 }
 
-.tag.is-primary {
-    background-color: var(--bulma-primary) !important;
+/* CLAVE: Separación del ícono y el texto */
+.card-footer-item .icon {
+    margin-right: 0.4rem !important; /* Aumentado a 0.4rem para mayor separación visual */
+    vertical-align: middle;
+}
+
+/* Estilo de los botones específicos */
+.card-footer-item.editar-anime {
+    background-color: #b19cd9; /* Lavanda */
+    color: white;
+}
+.card-footer-item.eliminar-anime {
+    background-color: #ff699a; /* Rosa fuerte */
+    color: white;
+}
+
+
+/* ===================================================================
+   6. Footer General Styling
+   =================================================================== */
+.footer {
+    background-color: #b5e7d5 !important;
+    color: #333333 !important;
+    padding: 3rem 1.5rem;
+}
+
+.footer a, .footer p {
+    color: #555555 !important;
 }
