@@ -45,7 +45,8 @@ Esta es una aplicación web que funciona como un **buscador, listado y gestor de
 
 ### **🧑‍💻 Autor**
 
-* **Tu Nombre**: [(Enlace a GitHub)](https://github.com/Lopez-Merin0)
+* **María Fernanda Lopez Merino**: [(Enlace a GitHub)](https://github.com/Lopez-Merin0)
+* **Deploy**: [(Enlace a Página)](https://lopez-merin0.github.io/buscador-animes/)
 
 ### **🙏 Créditos y Agradecimientos**
 
