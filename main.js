@@ -1,4 +1,4 @@
-// Configuración de la API (usa la URL de tu MockAPI para animes)
+// main.js - Versión final: usa data-index para obtener id real si data-id falla
 const API_URL = 'https://68d07d36ec1a5ff33827584d.mockapi.io/animes';
 
 // Elementos del DOM
@@ -18,7 +18,7 @@ const cancelarModalBtn = document.getElementById('cancelar-modal');
 const agregarAnimeBtn = document.getElementById('btn-agregar-anime');
 const guardarAnimeBtn = document.getElementById('guardar-anime');
 const animeForm = document.getElementById('anime-form');
-const animeIdInput = document.getElementById('anime-id');
+const animeIdInput = document.getElementById('anime-id'); // input oculto
 const animeTituloInput = document.getElementById('anime-titulo');
 const animeImagenInput = document.getElementById('anime-imagen');
 const animeGeneroSelect = document.getElementById('anime-genero');
@@ -26,7 +26,15 @@ const animeEstadoSelect = document.getElementById('anime-estado');
 
 let listaCompletaAnimes = [];
 
-// Funciones de utilidad
+// Helper: normaliza posibles campos de id que regrese la API
+const getResourceId = (obj) => {
+    if (!obj) return '';
+    // incluye "Id" (con mayúscula I) que es tu caso
+    const raw = obj.id ?? obj.Id ?? obj._id ?? obj.objectId ?? obj.ID ?? obj._id_str ?? '';
+    return (raw === null || raw === undefined) ? '' : String(raw);
+};
+
+// Utilidades UI
 const mostrarSpinner = () => loadingSpinner.classList.add('is-active');
 const ocultarSpinner = () => loadingSpinner.classList.remove('is-active');
 const mostrarModal = (titulo) => {
@@ -37,21 +45,25 @@ const ocultarModal = () => {
     crudModal.classList.remove('is-active');
     animeForm.reset();
     animeIdInput.value = '';
+    delete crudModal.dataset.editingId;
+    delete crudModal.dataset.editingIndex;
 };
 const limpiarListado = () => listaAnimes.innerHTML = '';
 const mostrarNoResultados = (mostrar) => {
     mostrar ? noResultadosDiv.classList.remove('is-hidden') : noResultadosDiv.classList.add('is-hidden');
 };
 
-// Renderizar Animes
+// Renderizado (con data-index siempre presente)
 const renderizarAnimes = (animes) => {
     limpiarListado();
-    if (animes.length === 0) {
+    if (!Array.isArray(animes) || animes.length === 0) {
         mostrarNoResultados(true);
         return;
     }
     mostrarNoResultados(false);
-    animes.forEach(anime => {
+
+    animes.forEach((anime, index) => {
+        const resourceId = getResourceId(anime) || ''; // puede quedar vacío si no hay id
         const columna = document.createElement('div');
         columna.className = 'column is-one-third-desktop is-half-tablet';
         columna.innerHTML = `
@@ -60,21 +72,22 @@ const renderizarAnimes = (animes) => {
                     <div class="media">
                         <div class="media-left">
                             <figure class="image is-48x48">
-                                <img class="is-rounded" src="${anime.imagen}" alt="Portada de ${anime.titulo}">
+                                <img class="is-rounded" src="${anime.imagen || ''}" alt="Portada de ${anime.titulo || ''}">
                             </figure>
                         </div>
                         <div class="media-content">
-                            <p class="title is-4">${anime.titulo}</p>
-                            <span class="tag is-primary is-light">${anime.genero}</span>
-                            <span class="tag is-link is-light">${anime.estado}</span>
+                            <p class="title is-4">${anime.titulo || ''}</p>
+                            <span class="tag is-primary is-light">${anime.genero || ''}</span>
+                            <span class="tag is-link is-light">${anime.estado || ''}</span>
                         </div>
                     </div>
                 </div>
                 <footer class="card-footer">
-                    <a href="#" class="card-footer-item editar-anime" data-id="${anime.id}">
+                    <!-- data-index siempre presente; data-id puede estar vacío -->
+                    <a href="#" class="card-footer-item editar-anime" data-id="${resourceId}" data-index="${index}">
                         <span class="icon"><i class="fas fa-edit"></i></span> Editar
                     </a>
-                    <a href="#" class="card-footer-item eliminar-anime" data-id="${anime.id}">
+                    <a href="#" class="card-footer-item eliminar-anime" data-id="${resourceId}" data-index="${index}">
                         <span class="icon"><i class="fas fa-trash"></i></span> Eliminar
                     </a>
                 </footer>
@@ -84,71 +97,110 @@ const renderizarAnimes = (animes) => {
     });
 };
 
-// Funciones CRUD
+// CRUD
 const obtenerAnimes = async () => {
     mostrarSpinner();
     try {
         const respuesta = await fetch(API_URL);
-        if (!respuesta.ok) throw new Error('Error al obtener los animes');
+        if (!respuesta.ok) throw new Error('Error al obtener los animes: ' + respuesta.status);
         listaCompletaAnimes = await respuesta.json();
+        console.log('Animes recibidos:', listaCompletaAnimes);
         filtrarYRenderizarAnimes();
     } catch (error) {
-        console.error('Error:', error);
+        console.error('Error obtenerAnimes:', error);
         mostrarNoResultados(true);
     } finally {
         ocultarSpinner();
     }
 };
 
+/**
+ * Agrega o edita un anime.
+ */
 const agregarOEditarAnime = async (anime) => {
     mostrarSpinner();
     try {
-        const esEdicion = !!anime.id;
-        const url = esEdicion ? `${API_URL}/${anime.id}` : API_URL;
+        const idRawCandidate = (anime.id ?? '').toString().trim();
+        const idRaw = idRawCandidate && idRawCandidate !== 'undefined' ? idRawCandidate : '';
+        const esEdicion = idRaw !== '';
+        const url = esEdicion ? `${API_URL}/${encodeURIComponent(idRaw)}` : API_URL;
+
+        if (esEdicion) {
+            const check = await fetch(url);
+            if (check.status === 404) {
+                console.warn('agregarOEditarAnime: recurso no encontrado (GET) para id=', idRaw, 'status:', check.status);
+                alert('No se puede editar: el anime seleccionado ya no existe en el servidor.');
+                return false;
+            }
+            if (!check.ok) {
+                const txt = await check.text().catch(() => '');
+                console.error('agregarOEditarAnime: fallo al verificar existencia:', check.status, txt);
+                throw new Error(`Fallo al verificar existencia del anime: ${check.status} ${txt}`);
+            }
+        }
+
         const metodo = esEdicion ? 'PUT' : 'POST';
+        const payload = {
+            titulo: anime.titulo,
+            imagen: anime.imagen,
+            genero: anime.genero,
+            estado: anime.estado
+        };
+
+        console.log(`${esEdicion ? 'EDITANDO' : 'AGREGANDO'} -> url: ${url} payload:`, payload);
 
         const respuesta = await fetch(url, {
             method: metodo,
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(anime)
+            body: JSON.stringify(payload)
         });
 
-        if (!respuesta.ok) throw new Error(`Error al ${esEdicion ? 'editar' : 'agregar'} el anime`);
+        if (!respuesta.ok) {
+            const cuerpo = await respuesta.text().catch(() => '');
+            console.error(`agregarOEditarAnime: respuesta no OK -> ${respuesta.status}`, cuerpo);
+            throw new Error(`Error al ${esEdicion ? 'editar' : 'agregar'} el anime: ${respuesta.status} ${cuerpo}`);
+        }
 
-        ocultarModal();
         await obtenerAnimes();
+        return true;
     } catch (error) {
-        console.error('Error:', error);
-        alert(`Ocurrió un error al ${esEdicion ? 'editar' : 'agregar'} el anime.`);
+        console.error('Error agregarOEditarAnime:', error);
+        return false;
     } finally {
         ocultarSpinner();
     }
 };
 
 const eliminarAnime = async (id) => {
+    const idStr = (id ?? '').toString().trim();
+    if (!idStr || idStr === 'undefined') {
+        alert('No se pudo eliminar: identificador inválido.');
+        console.warn('eliminarAnime: id inválido ->', id);
+        return;
+    }
+
     if (!confirm('¿Estás seguro de que quieres eliminar este anime?')) return;
     mostrarSpinner();
     try {
-        const respuesta = await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
-        if (!respuesta.ok) throw new Error('Error al eliminar el anime');
-        
+        const respuesta = await fetch(`${API_URL}/${encodeURIComponent(idStr)}`, { method: 'DELETE' });
+        if (!respuesta.ok) throw new Error('Error al eliminar el anime: ' + respuesta.status);
         await obtenerAnimes();
     } catch (error) {
-        console.error('Error:', error);
+        console.error('Error eliminarAnime:', error);
         alert('Ocurrió un error al eliminar el anime.');
     } finally {
         ocultarSpinner();
     }
 };
 
-// Lógica de Filtrado
+// Filtrado
 const filtrarYRenderizarAnimes = () => {
-    const filtroNombreValor = filtroNombre.value.toLowerCase();
+    const filtroNombreValor = (filtroNombre.value || '').toLowerCase();
     const filtroGeneroValor = filtroGenero.value;
     const filtroEstadoValor = filtroEstado.value;
 
-    const animesFiltrados = listaCompletaAnimes.filter(anime => {
-        const matchNombre = anime.titulo.toLowerCase().includes(filtroNombreValor);
+    const animesFiltrados = (listaCompletaAnimes || []).filter(anime => {
+        const matchNombre = (anime.titulo || '').toLowerCase().includes(filtroNombreValor);
         const matchGenero = !filtroGeneroValor || anime.genero === filtroGeneroValor;
         const matchEstado = !filtroEstadoValor || anime.estado === filtroEstadoValor;
         return matchNombre && matchGenero && matchEstado;
@@ -157,7 +209,7 @@ const filtrarYRenderizarAnimes = () => {
     renderizarAnimes(animesFiltrados);
 };
 
-// Event Listeners
+// Eventos
 document.addEventListener('DOMContentLoaded', obtenerAnimes);
 
 filtroNombre.addEventListener('input', filtrarYRenderizarAnimes);
@@ -172,56 +224,169 @@ limpiarFiltrosBtn.addEventListener('click', () => {
 });
 
 agregarAnimeBtn.addEventListener('click', () => {
+    animeForm.reset();
+    animeIdInput.value = '';
+    delete crudModal.dataset.editingId;
+    delete crudModal.dataset.editingIndex;
     mostrarModal('Agregar Anime');
+    setTimeout(() => animeTituloInput.focus(), 100);
 });
 
-cerrarModalBtn.addEventListener('click', ocultarModal);
-cancelarModalBtn.addEventListener('click', ocultarModal);
+cerrarModalBtn.addEventListener('click', () => ocultarModal());
+cancelarModalBtn.addEventListener('click', () => ocultarModal());
+window.addEventListener('click', (evt) => { if (evt.target === crudModal) ocultarModal(); });
 
-window.addEventListener('click', (evento) => {
-    if (evento.target === crudModal) ocultarModal();
-});
-
-guardarAnimeBtn.addEventListener('click', (evento) => {
+// Guardar (toma id de animeIdInput o del dataset del modal)
+guardarAnimeBtn.addEventListener('click', async (evento) => {
     evento.preventDefault();
-    if (animeForm.checkValidity()) {
-        const nuevoAnime = {
-            titulo: animeTituloInput.value,
-            imagen: animeImagenInput.value,
-            genero: animeGeneroSelect.value,
-            estado: animeEstadoSelect.value
-        };
-        const animeId = animeIdInput.value;
-        if (animeId) {
-            nuevoAnime.id = animeId;
-        }
-        agregarOEditarAnime(nuevoAnime);
-    } else {
+
+    if (!animeForm.checkValidity()) {
         animeForm.reportValidity();
+        return;
+    }
+
+    let idDesdeInput = (animeIdInput.value || '').toString().trim();
+    let idDesdeDataset = (crudModal.dataset.editingId || '').toString().trim();
+
+    if (idDesdeInput === 'undefined') idDesdeInput = '';
+    if (idDesdeDataset === 'undefined') idDesdeDataset = '';
+
+    const idFinal = idDesdeInput || idDesdeDataset;
+
+    const modalEsEditar = modalTitle.textContent && modalTitle.textContent.toLowerCase().includes('editar');
+    if (modalEsEditar && !idFinal) {
+        // Intentamos recuperar id real desde editingIndex si existe
+        const idxRaw = crudModal.dataset.editingIndex;
+        if (idxRaw) {
+            const idx = Number(idxRaw);
+            if (Number.isFinite(idx) && listaCompletaAnimes[idx]) {
+                const posibleId = getResourceId(listaCompletaAnimes[idx]);
+                if (posibleId) {
+                    console.log('Se recuperó id real desde index', idx, '->', posibleId);
+                    // usamos ese id para editar
+                    animeIdInput.value = posibleId;
+                    crudModal.dataset.editingId = posibleId;
+                } else {
+                    console.warn('Objeto en listaCompletaAnimes[index] no tiene id real:', listaCompletaAnimes[idx]);
+                }
+            }
+        }
+    }
+
+    // refrescamos idFinal por si lo recuperamos
+    const idFinalPostRecovery = (animeIdInput.value || crudModal.dataset.editingId || '').toString().trim();
+
+    // Si modal está en editar y aún no hay id, bloqueamos (no forzamos crear nuevo)
+    if (modalEsEditar && !idFinalPostRecovery) {
+        console.error('No se encontró el identificador del anime a editar. Asegúrate que la API retorne un campo "id" o similar.');
+        alert('No se encontró el identificador del anime a editar. Revisa la consola y la respuesta del servidor.');
+        return;
+    }
+
+    const nuevoAnime = {
+        titulo: animeTituloInput.value.trim(),
+        imagen: animeImagenInput.value.trim(),
+        genero: animeGeneroSelect.value,
+        estado: animeEstadoSelect.value
+    };
+
+    if (idFinalPostRecovery) nuevoAnime.id = idFinalPostRecovery;
+
+    guardarAnimeBtn.disabled = true;
+    guardarAnimeBtn.textContent = 'Guardando...';
+
+    try {
+        const exito = await agregarOEditarAnime(nuevoAnime);
+        if (exito) {
+            ocultarModal();
+            console.log('Anime guardado correctamente:', nuevoAnime);
+        } else {
+            alert('No se pudieron guardar los cambios. Revisa la consola para más detalles.');
+        }
+    } catch (err) {
+        console.error('Error en el guardado:', err);
+        alert('Ocurrió un error inesperado al guardar.');
+    } finally {
+        guardarAnimeBtn.disabled = false;
+        guardarAnimeBtn.textContent = 'Guardar';
     }
 });
 
+// Delegación: editar / eliminar
 listaAnimes.addEventListener('click', (evento) => {
     const botonEditar = evento.target.closest('.editar-anime');
-    const botonEliminar = evento.target.closest('.eliminar-anime');
-
     if (botonEditar) {
         evento.preventDefault();
-        const id = botonEditar.dataset.id;
-        
-        const animeAEditar = listaCompletaAnimes.find(anime => anime.id === id); 
-        if (animeAEditar) {
-            animeIdInput.value = animeAEditar.id;
-            animeTituloInput.value = animeAEditar.titulo;
-            animeImagenInput.value = animeAEditar.imagen;
-            animeGeneroSelect.value = animeAEditar.genero;
-            animeEstadoSelect.value = animeAEditar.estado;
-            mostrarModal('Editar Anime');
+        const dataIdRaw = (botonEditar.dataset.id || '').toString().trim();
+        const dataIndexRaw = (botonEditar.dataset.index || '').toString().trim();
+        const dataId = (dataIdRaw && dataIdRaw !== 'undefined') ? dataIdRaw : '';
+
+        // Primero intentamos localizar el objeto por data-id si existe
+        let animeAEditar = null;
+        if (dataId) {
+            animeAEditar = listaCompletaAnimes.find(a => getResourceId(a) === dataId);
         }
-    } else if (botonEliminar) {
+
+        // Si no hay data-id o no se encontró, intentamos por index (fallback seguro)
+        if (!animeAEditar && dataIndexRaw) {
+            const idx = Number(dataIndexRaw);
+            if (Number.isFinite(idx) && listaCompletaAnimes[idx]) {
+                animeAEditar = listaCompletaAnimes[idx];
+                // recuperamos id real desde el objeto (si existe)
+                const posibleId = getResourceId(animeAEditar);
+                if (!posibleId) {
+                    console.warn('Objeto seleccionado por index no tiene id:', animeAEditar);
+                } else {
+                    console.log('Recuperado id desde index:', posibleId);
+                }
+            } else {
+                console.warn('data-index inválido o fuera de rango:', dataIndexRaw);
+            }
+        }
+
+        if (!animeAEditar) {
+            console.warn('No se encontró el anime a editar con id/index:', dataId || dataIndexRaw, listaCompletaAnimes);
+            alert('No se encontró la información del anime seleccionado.');
+            return;
+        }
+
+        // Obtén el id real (si existe) y guárdalo; si no existe, mostramos mensaje al guardar (no aquí)
+        const finalId = getResourceId(animeAEditar);
+        animeIdInput.value = finalId;
+        crudModal.dataset.editingId = finalId || '';
+        // guarda editingIndex para uso en recuperación
+        if (dataIndexRaw) crudModal.dataset.editingIndex = dataIndexRaw;
+
+        animeTituloInput.value = animeAEditar.titulo || '';
+        animeImagenInput.value = animeAEditar.imagen || '';
+        animeGeneroSelect.value = animeAEditar.genero || '';
+        animeEstadoSelect.value = animeAEditar.estado || '';
+        mostrarModal('Editar Anime');
+
+        setTimeout(() => animeTituloInput.focus(), 100);
+        return;
+    }
+
+    const botonEliminar = evento.target.closest('.eliminar-anime');
+    if (botonEliminar) {
         evento.preventDefault();
-        const id = botonEliminar.dataset.id;
-        // Se llama a la función eliminarAnime
-        eliminarAnime(id);
+        const idRaw = (botonEliminar.dataset.id || '').toString().trim();
+        const indexRaw = (botonEliminar.dataset.index || '').toString().trim();
+        let idFinal = (idRaw && idRaw !== 'undefined') ? idRaw : '';
+
+        if (!idFinal && indexRaw) {
+            const idx = Number(indexRaw);
+            if (Number.isFinite(idx) && listaCompletaAnimes[idx]) {
+                idFinal = getResourceId(listaCompletaAnimes[idx]);
+            }
+        }
+
+        if (!idFinal) {
+            console.warn('El elemento eliminar no tiene data-id válido o id no encontrado.');
+            alert('No se pudo determinar el anime a eliminar.');
+            return;
+        }
+        eliminarAnime(idFinal);
+        return;
     }
 });
